@@ -1,0 +1,62 @@
+const firebaseConfig = {
+  // Aquí va la configuración de tu proyecto de Firebase
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const chatForm = document.querySelector('.chat-form');
+const chatInput = document.querySelector('.chat-input');
+const chatMessages = document.querySelector('.chat-messages');
+
+let username = '';
+
+function getUsername() {
+  while (!username) {
+    username = prompt('Ingresa tu nombre de usuario:');
+  }
+}
+
+function saveMessage(message) {
+  db.collection('messages')
+    .add({
+      username,
+      message,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    })
+    .catch(function(error) {
+      console.error('Error al guardar mensaje:', error);
+    });
+}
+
+function displayMessage(doc) {
+  const message = doc.data();
+  const messageElement = document.createElement('div');
+  messageElement.classList.add('message');
+  if (message.username === username) {
+    messageElement.classList.add('me');
+  }
+  messageElement.innerHTML = `<span class="username">${message.username}:</span> ${message.message}`;
+  chatMessages.appendChild(messageElement);
+}
+
+getUsername();
+
+db.collection('messages')
+  .orderBy('timestamp')
+  .onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      if (change.type === 'added') {
+        displayMessage(change.doc);
+      }
+    });
+  });
+
+chatForm.addEventListener('submit', function(event) {
+  event.preventDefault();
+  const message = chatInput.value.trim();
+  if (message) {
+    saveMessage(message);
+    chatInput.value = '';
+  }
+});
